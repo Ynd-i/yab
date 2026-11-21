@@ -1,0 +1,38 @@
+# Builds Yab Dev on macOS 26 and keeps the app bundle as an artifact,
+# to run on a Mac that can't install Xcode 26.5.
+name: Yab Dev build
+
+on:
+  push:
+    branches: [yab-dev-build]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  YAB_SIGN_IDENTITY: "-"
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Build the app bundle (ad hoc signed)
+        run: ./build.sh
+      - name: Check and pack the bundle
+        run: |
+          codesign --verify --deep --strict "build/yab Dev.app"
+          ditto -c -k --keepParent "build/yab Dev.app" yab-dev.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yab-dev-app
+          path: yab-dev.zip
+          retention-days: 7
